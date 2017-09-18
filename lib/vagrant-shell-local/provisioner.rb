@@ -3,12 +3,19 @@ require 'open3'
 module VagrantPlugins::ShellLocal
   class Provisioner < Vagrant.plugin('2', :provisioner)
     def provision
-      result = Vagrant::Util::Subprocess.execute(
-        *config.command,
-        :notify => [:stdout, :stderr],        
-        :env => {PATH: ENV["VAGRANT_OLD_ENV_PATH"]},
-      ) do |io_name, data|
-        @machine.env.ui.info "[#{io_name}] #{data}"
+      saved_path, ENV['PATH'] = ENV['PATH'], ENV["VAGRANT_OLD_ENV_PATH"]
+      begin
+        result = Vagrant::Util::Subprocess.execute(
+          *config.command,
+          :notify => [:stdout, :stderr],
+          :env => {
+            PATH: ENV["VAGRANT_OLD_ENV_PATH"]
+          },
+        ) do |io_name, data|
+          @machine.env.ui.info "[#{io_name}] #{data}"
+        end
+      ensure
+        ENV['PATH'] = saved_path
       end
 
       if !result.exit_code.zero?      
